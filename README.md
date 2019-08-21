@@ -1,2 +1,2 @@
 # Spring
-Learn Spring's design thinking, subtle abstractions, and class architecture design
+Spring's design thinking, subtle abstractions, and class architecture design.
