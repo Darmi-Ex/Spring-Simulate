@@ -1,2 +1,2 @@
 # Spring
-Spring's design thinking, subtle abstractions, and class architecture design.
+Spring design thinking, subtle abstractions, and class architecture design.
