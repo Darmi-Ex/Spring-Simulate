@@ -3,6 +3,9 @@ package org.springframework.springcore.utils;
 import com.sun.istack.internal.Nullable;
 
 import java.beans.Introspector;
+import java.io.Closeable;
+import java.io.Externalizable;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -11,12 +14,15 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public abstract class ClassUtils {
@@ -31,12 +37,13 @@ public abstract class ClassUtils {
     private static final Map<Class<?>, Class<?>> primitiveWrapperTypeMap = new IdentityHashMap(8);
     private static final Map<Class<?>, Class<?>> primitiveTypeToWrapperMap = new IdentityHashMap(8);
     private static final Map<String, Class<?>> primitiveTypeNameMap = new HashMap(32);
-    private static final Map<String, Class<?>> commonClassCache = new HashMap(32);
+    private static final Map<String, Class<?>> commonClassCache = new HashMap(64);
+    private static final Set<Class<?>> javaLanguageInterfaces;
 
     public ClassUtils() {
     }
 
-    private static void registerCommonClasses(Class<?>... commonClasses) {
+    private static void registerCommonClasses(Class... commonClasses) {
         Class[] var1 = commonClasses;
         int var2 = commonClasses.length;
 
@@ -134,9 +141,9 @@ public abstract class ClassUtils {
         try {
             return forName(className, classLoader);
         } catch (ClassNotFoundException var3) {
-            throw new IllegalArgumentException("Cannot find class [" + className + "]", var3);
+            throw new IllegalArgumentException("Could not find class [" + className + "]", var3);
         } catch (LinkageError var4) {
-            throw new IllegalArgumentException("Error loading class [" + className + "]: problem with class file or dependent class.", var4);
+            throw new IllegalArgumentException("Unresolvable class definition for class [" + className + "]", var4);
         }
     }
 
@@ -173,6 +180,10 @@ public abstract class ClassUtils {
         }
 
         return clazz;
+    }
+
+    public static boolean isInnerClass(Class<?> clazz) {
+        return clazz.isMemberClass() && !Modifier.isStatic(clazz.getModifiers());
     }
 
     public static boolean isCacheSafe(Class<?> clazz, @Nullable ClassLoader classLoader) {
@@ -288,12 +299,12 @@ public abstract class ClassUtils {
         return typeName != null && (typeName.equals(clazz.getTypeName()) || typeName.equals(clazz.getSimpleName()));
     }
 
-    public static boolean hasConstructor(Class<?> clazz, Class<?>... paramTypes) {
+    public static boolean hasConstructor(Class<?> clazz, Class... paramTypes) {
         return getConstructorIfAvailable(clazz, paramTypes) != null;
     }
 
     @Nullable
-    public static <T> Constructor<T> getConstructorIfAvailable(Class<T> clazz, Class<?>... paramTypes) {
+    public static <T> Constructor<T> getConstructorIfAvailable(Class<T> clazz, Class... paramTypes) {
         Assert.notNull(clazz, "Class must not be null");
 
         try {
@@ -303,11 +314,11 @@ public abstract class ClassUtils {
         }
     }
 
-    public static boolean hasMethod(Class<?> clazz, String methodName, Class<?>... paramTypes) {
+    public static boolean hasMethod(Class<?> clazz, String methodName, Class... paramTypes) {
         return getMethodIfAvailable(clazz, methodName, paramTypes) != null;
     }
 
-    public static Method getMethod(Class<?> clazz, String methodName, @Nullable Class<?>... paramTypes) {
+    public static Method getMethod(Class<?> clazz, String methodName, @Nullable Class... paramTypes) {
         Assert.notNull(clazz, "Class must not be null");
         Assert.notNull(methodName, "Method name must not be null");
         if (paramTypes != null) {
@@ -340,7 +351,7 @@ public abstract class ClassUtils {
     }
 
     @Nullable
-    public static Method getMethodIfAvailable(Class<?> clazz, String methodName, @Nullable Class<?>... paramTypes) {
+    public static Method getMethodIfAvailable(Class<?> clazz, String methodName, @Nullable Class... paramTypes) {
         Assert.notNull(clazz, "Class must not be null");
         Assert.notNull(methodName, "Method name must not be null");
         if (paramTypes != null) {
@@ -471,7 +482,7 @@ public abstract class ClassUtils {
     }
 
     @Nullable
-    public static Method getStaticMethod(Class<?> clazz, String methodName, Class<?>... args) {
+    public static Method getStaticMethod(Class<?> clazz, String methodName, Class... args) {
         Assert.notNull(clazz, "Class must not be null");
         Assert.notNull(methodName, "Method name must not be null");
 
@@ -566,8 +577,8 @@ public abstract class ClassUtils {
         }
     }
 
-    public static String classNamesToString(Class<?>... classes) {
-        return classNamesToString((Collection) Arrays.asList(classes));
+    public static String classNamesToString(Class... classes) {
+        return classNamesToString((Collection)Arrays.asList(classes));
     }
 
     public static String classNamesToString(@Nullable Collection<Class<?>> classes) {
@@ -590,9 +601,8 @@ public abstract class ClassUtils {
         }
     }
 
-    @Nullable
-    public static Class<?>[] toClassArray(@Nullable Collection<Class<?>> collection) {
-        return collection == null ? null : (Class[])collection.toArray(new Class[collection.size()]);
+    public static Class<?>[] toClassArray(Collection<Class<?>> collection) {
+        return (Class[])collection.toArray(new Class[0]);
     }
 
     public static Class<?>[] getAllInterfaces(Object instance) {
@@ -605,8 +615,7 @@ public abstract class ClassUtils {
     }
 
     public static Class<?>[] getAllInterfacesForClass(Class<?> clazz, @Nullable ClassLoader classLoader) {
-        Set<Class<?>> ifcs = getAllInterfacesForClassAsSet(clazz, classLoader);
-        return (Class[])ifcs.toArray(new Class[ifcs.size()]);
+        return toClassArray(getAllInterfacesForClassAsSet(clazz, classLoader));
     }
 
     public static Set<Class<?>> getAllInterfacesAsSet(Object instance) {
@@ -682,6 +691,10 @@ public abstract class ClassUtils {
         }
     }
 
+    public static boolean isJavaLanguageInterface(Class<?> ifc) {
+        return javaLanguageInterfaces.contains(ifc);
+    }
+
     public static boolean isCglibProxy(Object object) {
         return isCglibProxyClass(object.getClass());
     }
@@ -709,7 +722,7 @@ public abstract class ClassUtils {
         });
         Set<Class<?>> primitiveTypes = new HashSet(32);
         primitiveTypes.addAll(primitiveWrapperTypeMap.values());
-        primitiveTypes.addAll(Arrays.asList(boolean[].class, byte[].class, char[].class, double[].class, float[].class, int[].class, long[].class, short[].class));
+        Collections.addAll(primitiveTypes, new Class[]{boolean[].class, byte[].class, char[].class, double[].class, float[].class, int[].class, long[].class, short[].class});
         primitiveTypes.add(Void.TYPE);
         Iterator var1 = primitiveTypes.iterator();
 
@@ -719,7 +732,11 @@ public abstract class ClassUtils {
         }
 
         registerCommonClasses(Boolean[].class, Byte[].class, Character[].class, Double[].class, Float[].class, Integer[].class, Long[].class, Short[].class);
-        registerCommonClasses(Number.class, Number[].class, String.class, String[].class, Object.class, Object[].class, Class.class, Class[].class);
+        registerCommonClasses(Number.class, Number[].class, String.class, String[].class, Class.class, Class[].class, Object.class, Object[].class);
         registerCommonClasses(Throwable.class, Exception.class, RuntimeException.class, Error.class, StackTraceElement.class, StackTraceElement[].class);
+        registerCommonClasses(Enum.class, Iterable.class, Iterator.class, Enumeration.class, Collection.class, List.class, Set.class, Map.class, Map.Entry.class, Optional.class);
+        Class<?>[] javaLanguageInterfaceArray = new Class[]{Serializable.class, Externalizable.class, Closeable.class, AutoCloseable.class, Cloneable.class, Comparable.class};
+        registerCommonClasses(javaLanguageInterfaceArray);
+        javaLanguageInterfaces = new HashSet(Arrays.asList(javaLanguageInterfaceArray));
     }
 }

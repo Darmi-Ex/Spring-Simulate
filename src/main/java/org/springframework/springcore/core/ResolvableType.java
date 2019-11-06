@@ -985,7 +985,7 @@ public class ResolvableType implements Serializable {
         }
     }
 
-    private class DefaultVariableResolver implements ResolvableType.VariableResolver {
+    private class DefaultVariableResolver implements VariableResolver {
         private DefaultVariableResolver() {
         }
 

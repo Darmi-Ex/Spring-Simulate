@@ -1,3 +1,5 @@
+import org.jetbrains.annotations.NotNull;
+
 import java.lang.reflect.Field;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,5 +24,12 @@ public class Test {
         email.setAccessible(true);
         final String o = (String) email.get(user);
         System.out.println(o);
+
+        Comparable<Object> objectComparable = new Comparable<Object>() {
+            @Override
+            public int compareTo(@NotNull Object o) {
+                return 0;
+            }
+        };
     }
 }

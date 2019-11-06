@@ -1,4 +1,6 @@
 package org.springframework.springcontext.context.support;
 
-public class GenericApplicationContext extends AbstractApplicationContext {
+import org.springframework.springbean.beans.factory.support.BeanDefinitionRegistry;
+
+public class GenericApplicationContext extends AbstractApplicationContext  implements BeanDefinitionRegistry {
 }
