@@ -1,2 +1,2 @@
-# Spring-Simulate
-Learn Spring's design thinking, subtle abstractions, and class architecture design
+# Spring
+Spring design thinking, subtle abstractions, and class architecture design.
